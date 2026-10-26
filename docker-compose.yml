@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zetrc
+      POSTGRES_PASSWORD: zetrc
+      POSTGRES_DB: zetrc
+    ports:
+      - "5433:5432"
+    volumes:
+      - zetrc_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zetrc"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://zetrc:zetrc@postgres:5432/zetrc?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      JWT_TTL_HOURS: 24
+      OTP_TTL_MINUTES: 10
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173}
+      UPLOAD_DIR: /data/uploads
+      MAX_UPLOAD_SIZE_MB: 50
+      # Notifications: log (dev), africastalking, whatsapp — comma-separated
+      NOTIFY_CHANNELS: ${NOTIFY_CHANNELS:-log}
+      AT_USERNAME: ${AT_USERNAME:-}
+      AT_API_KEY: ${AT_API_KEY:-}
+      AT_SENDER_ID: ${AT_SENDER_ID:-}
+      WHATSAPP_PHONE_NUMBER_ID: ${WHATSAPP_PHONE_NUMBER_ID:-}
+      WHATSAPP_TOKEN: ${WHATSAPP_TOKEN:-}
+      CA_PASS_MARK: ${CA_PASS_MARK:-50}
+    ports:
+      - "8080:8080"
+    volumes:
+      - zetrc_uploads:/data/uploads
+
+volumes:
+  zetrc_postgres_data:
+  zetrc_uploads:
